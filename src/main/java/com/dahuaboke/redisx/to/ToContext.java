@@ -3,6 +3,7 @@ package com.dahuaboke.redisx.to;
 import com.dahuaboke.redisx.Constant;
 import com.dahuaboke.redisx.Context;
 import com.dahuaboke.redisx.cache.CacheManager;
+import com.dahuaboke.redisx.command.from.SyncCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,7 +59,7 @@ public class ToContext extends Context {
         return port;
     }
 
-    public CacheManager.CommandReference listen() {
+    public SyncCommand listen() {
         return cacheManager.listen(this);
     }
 
@@ -79,9 +80,9 @@ public class ToContext extends Context {
     }
 
     @Override
-    public boolean isAdapt(boolean toIsCluster, String command) {
-        if (toIsCluster && command != null) {
-            int hash = calculateHash(command) % Constant.COUNT_SLOT_NUMS;
+    public boolean isAdapt(boolean toIsCluster, String key) {
+        if (toIsCluster && key != null) {
+            int hash = calculateHash(key) % Constant.COUNT_SLOT_NUMS;
             return hash >= slotBegin && hash <= slotEnd;
         } else {
             //哨兵模式或者单节点则只存在一个为ToContext类型的context
@@ -89,7 +90,6 @@ public class ToContext extends Context {
         }
     }
 
-    @Override
     public String sendCommand(Object command, int timeout) {
         return sendCommand(command, timeout, false, null);
     }
@@ -98,8 +98,8 @@ public class ToContext extends Context {
         return sendCommand(command, timeout, false, key);
     }
 
-    public String sendCommand(Object command, int timeout, boolean unCheck) {
-        return sendCommand(command, timeout, unCheck, null);
+    public void sendCommand(Object command, int timeout, boolean unCheck) {
+        sendCommand(command, timeout, unCheck, null);
     }
 
     public String sendCommand(Object command, int timeout, boolean unCheck, String key) {
@@ -195,7 +195,7 @@ public class ToContext extends Context {
             add(getId());
             add(preemptMasterCommand());
         }};
-        return Boolean.valueOf(this.sendCommand(commands, 1000, switchFlag));
+        return Boolean.parseBoolean(this.sendCommand(commands, 1000, switchFlag));
     }
 
     public String buildPreemptMasterCompulsoryCommand() {

@@ -2,6 +2,7 @@ package com.dahuaboke.redisx.from.handler;
 
 import com.dahuaboke.redisx.Constant;
 import com.dahuaboke.redisx.command.from.RdbCommand;
+import com.dahuaboke.redisx.command.from.SyncCommand;
 import com.dahuaboke.redisx.from.FromContext;
 import com.dahuaboke.redisx.from.rdb.CommandParser;
 import com.dahuaboke.redisx.from.rdb.RdbData;
@@ -12,11 +13,16 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.handler.codec.redis.ArrayRedisMessage;
+import io.netty.handler.codec.redis.BulkStringHeaderRedisMessage;
+import io.netty.handler.codec.redis.FullBulkStringRedisMessage;
+import io.netty.handler.codec.redis.RedisMessage;
 import io.netty.util.CharsetUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -121,7 +127,7 @@ public class RdbByteStreamDecoder extends ChannelInboundHandlerAdapter {
                     CompletableFuture<Void> future = CompletableFuture.supplyAsync(() -> {
                         String threadName = Constant.PROJECT_NAME + "-RdbParseThread-" + fromContext.getHost() + ":" + fromContext.getPort();
                         Thread.currentThread().setName(threadName);
-                        parse(finalRdbBuf);
+                        parse(ctx, finalRdbBuf);
                         return null;
                     });
                     future.exceptionally(e -> {
@@ -152,7 +158,7 @@ public class RdbByteStreamDecoder extends ChannelInboundHandlerAdapter {
 
     }
 
-    private void parse(ByteBuf byteBuf) {
+    private void parse(ChannelHandlerContext ctx, ByteBuf byteBuf) {
         RdbParser parser = new RdbParser(byteBuf);
         parser.parseHeader();
         logger.debug(parser.getRdbInfo().getRdbHeader().toString());
@@ -171,7 +177,18 @@ public class RdbByteStreamDecoder extends ChannelInboundHandlerAdapter {
             if (rdbData != null) {
                 if (rdbData.getDataNum() == 1) {
                     long selectDB = rdbData.getSelectDB();
-                    boolean success = fromContext.publish(Constant.SELECT_PREFIX + selectDB, null);
+                    BulkStringHeaderRedisMessage selectLen = new BulkStringHeaderRedisMessage(Constant.SELECT_PREFIX.length());
+                    FullBulkStringRedisMessage select = new FullBulkStringRedisMessage(ByteBufUtil.writeUtf8(ctx.alloc(), Constant.SELECT_PREFIX));
+                    String dbSize = String.valueOf(selectDB);
+                    BulkStringHeaderRedisMessage dbLen = new BulkStringHeaderRedisMessage(dbSize.length());
+                    FullBulkStringRedisMessage db = new FullBulkStringRedisMessage(ByteBufUtil.writeUtf8(ctx.alloc(), dbSize));
+                    ArrayRedisMessage arrayRedisMessage = new ArrayRedisMessage(new ArrayList<RedisMessage>() {{
+                        add(selectLen);
+                        add(select);
+                        add(dbLen);
+                        add(db);
+                    }});
+                    boolean success = fromContext.publish(new SyncCommand(fromContext, arrayRedisMessage, false));
                     if (success) {
                         logger.debug("Select db success [{}]", selectDB);
                     } else {

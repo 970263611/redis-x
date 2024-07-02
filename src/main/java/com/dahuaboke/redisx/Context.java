@@ -2,6 +2,7 @@ package com.dahuaboke.redisx;
 
 import com.dahuaboke.redisx.handler.SlotInfoHandler;
 import com.dahuaboke.redisx.utils.CRC16;
+import io.netty.handler.codec.redis.RedisMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,12 +29,8 @@ public class Context {
         this.toIsCluster = toIsCluster;
     }
 
-    public boolean isAdapt(boolean isCluster, String command) {
+    public boolean isAdapt(boolean isCluster, String key) {
         return false;
-    }
-
-    public String sendCommand(Object command, int timeout) {
-        throw new RuntimeException();
     }
 
     public void setSlotInfo(SlotInfoHandler.SlotInfo slotInfo) {

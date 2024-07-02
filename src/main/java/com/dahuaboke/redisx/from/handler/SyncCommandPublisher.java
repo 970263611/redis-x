@@ -16,6 +16,7 @@ public class SyncCommandPublisher extends SimpleChannelInboundHandler<SyncComman
 
     private static final Logger logger = LoggerFactory.getLogger(SyncCommandPublisher.class);
     private FromContext fromContext;
+    private long notSyncCommandLength;
 
     public SyncCommandPublisher(FromContext fromContext) {
         this.fromContext = fromContext;
@@ -23,13 +24,26 @@ public class SyncCommandPublisher extends SimpleChannelInboundHandler<SyncComman
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, SyncCommand msg) throws Exception {
-        String command = msg.getCommand();
-        int length = msg.getLength();
-        boolean success = fromContext.publish(command, length);
-        if (success) {
-            logger.debug("Success sync command [{}], length [{}]", command, length);
+        if (fromContext.isConsole()) {
+            ctx.fireChannelRead(msg.getRedisMessage());
         } else {
-            logger.error("Sync command [{}] failed, length [{}]", command, length);
+            int length = msg.getMessageLength();
+            boolean ignoreMessage = msg.isIgnoreMessage();
+            if (!ignoreMessage) {
+                if (notSyncCommandLength > 0) {
+                    length += (int) notSyncCommandLength;
+                    notSyncCommandLength = 0;
+                }
+                msg.setLength(length);
+                boolean success = fromContext.publish(msg);
+                if (success) {
+                    logger.debug("Success sync command, length [{}]", length);
+                } else {
+                    logger.error("Sync command failed, length [{}]", length);
+                }
+            } else {
+                notSyncCommandLength += length;
+            }
         }
     }
 }

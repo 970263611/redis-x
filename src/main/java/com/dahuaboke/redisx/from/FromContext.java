@@ -3,6 +3,7 @@ package com.dahuaboke.redisx.from;
 import com.dahuaboke.redisx.Constant;
 import com.dahuaboke.redisx.Context;
 import com.dahuaboke.redisx.cache.CacheManager;
+import com.dahuaboke.redisx.command.from.SyncCommand;
 import io.netty.channel.Channel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,15 +57,15 @@ public class FromContext extends Context {
         return port;
     }
 
-    public boolean publish(String msg, Integer length) {
-        if (!isConsole) {
-            return cacheManager.publish(msg, length, this);
+    public boolean publish(SyncCommand msg) {
+        return cacheManager.publish(msg);
+    }
+
+    public void publishForConsole(String msg) {
+        if (replyQueue == null) {
+            throw new IllegalStateException("By console mode replyQueue need init");
         } else {
-            if (replyQueue == null) {
-                throw new IllegalStateException("By console mode replyQueue need init");
-            } else {
-                return replyQueue.offer(msg);
-            }
+            replyQueue.offer(msg);
         }
     }
 
@@ -87,9 +88,9 @@ public class FromContext extends Context {
     }
 
     @Override
-    public boolean isAdapt(boolean isMasterCluster, String command) {
-        if (isMasterCluster && command != null) {
-            int hash = calculateHash(command) % Constant.COUNT_SLOT_NUMS;
+    public boolean isAdapt(boolean isMasterCluster, String key) {
+        if (isMasterCluster && key != null) {
+            int hash = calculateHash(key) % Constant.COUNT_SLOT_NUMS;
             return hash >= slotBegin && hash <= slotEnd;
         } else {
             //哨兵模式或者单节点则只存在一个为ToContext类型的context
@@ -109,7 +110,6 @@ public class FromContext extends Context {
         this.slotEnd = slotEnd;
     }
 
-    @Override
     public String sendCommand(Object command, int timeout) {
         if (replyQueue == null) {
             throw new IllegalStateException("By console mode replyQueue need init");

@@ -2,9 +2,12 @@ package com.dahuaboke.redisx.from.handler;
 
 import com.dahuaboke.redisx.Constant;
 import com.dahuaboke.redisx.command.from.SyncCommand;
+import com.dahuaboke.redisx.from.FromContext;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.redis.RedisMessage;
+import io.netty.handler.codec.redis.SimpleStringRedisMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,17 +16,23 @@ import org.slf4j.LoggerFactory;
  * auth: dahua
  * desc:
  */
-public class PostDistributeHandler extends SimpleChannelInboundHandler<String[]> {
+public class PostDistributeHandler extends SimpleChannelInboundHandler<RedisMessage> {
 
     private static final Logger logger = LoggerFactory.getLogger(PostDistributeHandler.class);
+    private FromContext fromContext;
+
+    public PostDistributeHandler(FromContext fromContext) {
+        this.fromContext = fromContext;
+    }
 
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, String[] msg) throws Exception {
+    public void channelRead0(ChannelHandlerContext ctx, RedisMessage msg) throws Exception {
         Channel channel = ctx.channel();
         if (channel.isActive() && channel.pipeline().get(Constant.INIT_SYNC_HANDLER_NAME) != null) {
-            ctx.channel().attr(Constant.SYNC_REPLY).set(msg[0]);
+            String reply = ((SimpleStringRedisMessage) msg).content();
+            ctx.channel().attr(Constant.SYNC_REPLY).set(reply);
         } else {
-            ctx.fireChannelRead(new SyncCommand(msg[0], Integer.parseInt(msg[1])));
+            ctx.fireChannelRead(new SyncCommand(fromContext, msg, true));
         }
     }
 }

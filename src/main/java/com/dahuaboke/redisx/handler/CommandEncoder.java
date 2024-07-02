@@ -27,7 +27,6 @@ public class CommandEncoder extends ChannelOutboundHandlerAdapter {
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-        List<RedisMessage> children = new ArrayList();
         if (msg instanceof String) {
 //            String command = ((String) msg).replaceAll("^\\s+", "");//去除字符串左侧的所有空格
 //            char[] chars = command.toCharArray();
@@ -55,7 +54,10 @@ public class CommandEncoder extends ChannelOutboundHandlerAdapter {
                 buffer.writeBytes(new byte[]{'\r', '\n'});
             }
             ctx.write(buffer, promise);
+        } else if (msg instanceof RedisMessage) {
+            ctx.write(msg, promise);
         } else if (msg instanceof List) {
+            List<RedisMessage> children = new ArrayList<>();
             List<String> commands = (List<String>) msg;
             for (String command : commands) {
                 children.add(new FullBulkStringRedisMessage(ByteBufUtil.writeUtf8(ctx.alloc(), command)));

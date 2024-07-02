@@ -1,7 +1,7 @@
 package com.dahuaboke.redisx.cache;
 
 import com.dahuaboke.redisx.Context;
-import com.dahuaboke.redisx.from.FromContext;
+import com.dahuaboke.redisx.command.from.SyncCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,7 +21,7 @@ public final class CacheManager {
 
     private static final Logger logger = LoggerFactory.getLogger(CacheManager.class);
     private List<Context> contexts = new ArrayList();
-    private Map<Context, BlockingQueue<CommandReference>> cache = new HashMap();
+    private Map<Context, BlockingQueue<SyncCommand>> cache = new HashMap();
     private boolean fromIsCluster;
     private String fromPassword;
     private boolean toIsCluster;
@@ -69,7 +69,7 @@ public final class CacheManager {
      * @param context
      */
     public void registerTo(Context context) {
-        BlockingQueue<CommandReference> queue = new LinkedBlockingQueue();
+        BlockingQueue<SyncCommand> queue = new LinkedBlockingQueue();
         cache.put(context, queue);
     }
 
@@ -81,32 +81,20 @@ public final class CacheManager {
         return cache.get(context).size() > 0;
     }
 
-    /**
-     * 非web模式走这个方法，因为只有web需要回调传递
-     *
-     * @param command
-     * @param length
-     * @param fromContext
-     * @return
-     */
-    public boolean publish(String command, Integer length, FromContext fromContext) {
-        return publish(new CommandReference(command, length, fromContext));
-    }
-
-    public boolean publish(CommandReference commandReference) {
-        String command = commandReference.getContent();
-        for (Map.Entry<Context, BlockingQueue<CommandReference>> entry : cache.entrySet()) {
+    public boolean publish(SyncCommand msg) {
+        String key = msg.getKey();
+        for (Map.Entry<Context, BlockingQueue<SyncCommand>> entry : cache.entrySet()) {
             Context k = entry.getKey();
-            BlockingQueue<CommandReference> v = entry.getValue();
-            if (k.isAdapt(toIsCluster, command)) {
-                boolean offer = v.offer(commandReference);
+            BlockingQueue<SyncCommand> v = entry.getValue();
+            if (k.isAdapt(toIsCluster, key)) {
+                boolean offer = v.offer(msg);
                 if (!offer) {
                     logger.error("Publish command error, queue size [{}]", v.size());
                 }
                 return offer;
             }
         }
-        logger.error("Key hash not adapt any toContext [{}]", command);
+        logger.error("Key hash not adapt any toContext [{}]", key);
         return false;
     }
 
@@ -126,7 +114,7 @@ public final class CacheManager {
         this.fromStarted.set(isMaster);
     }
 
-    public CommandReference listen(Context context) {
+    public SyncCommand listen(Context context) {
         try {
             if (cache.containsKey(context)) {
                 return cache.get(context).poll(1, TimeUnit.SECONDS);
@@ -192,30 +180,6 @@ public final class CacheManager {
 
         public long getOffset() {
             return offset;
-        }
-    }
-
-    public static class CommandReference {
-        private String content;
-        private Integer length;
-        private FromContext fromContext;
-
-        public CommandReference(String content, Integer length, FromContext fromContext) {
-            this.content = content;
-            this.length = length;
-            this.fromContext = fromContext;
-        }
-
-        public String getContent() {
-            return content;
-        }
-
-        public Integer getLength() {
-            return length;
-        }
-
-        public FromContext getFromContext() {
-            return fromContext;
         }
     }
 }
