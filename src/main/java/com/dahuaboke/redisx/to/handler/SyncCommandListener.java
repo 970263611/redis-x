@@ -61,7 +61,6 @@ public class SyncCommandListener extends ChannelInboundHandlerAdapter {
                     }
                     if (!immediate && (flushThreshold > 100 || (System.currentTimeMillis() - timeThreshold > 100))) {
                         ctx.flush();
-                        logger.trace("Flush data success");
                         flushThreshold = 0;
                         timeThreshold = System.currentTimeMillis();
                     }

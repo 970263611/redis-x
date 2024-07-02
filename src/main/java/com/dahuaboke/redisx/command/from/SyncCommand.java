@@ -1,11 +1,15 @@
 package com.dahuaboke.redisx.command.from;
 
 import com.dahuaboke.redisx.Constant;
-import com.dahuaboke.redisx.Context;
 import com.dahuaboke.redisx.command.Command;
 import com.dahuaboke.redisx.from.FromContext;
-import io.netty.handler.codec.redis.*;
+import io.netty.handler.codec.redis.ArrayRedisMessage;
+import io.netty.handler.codec.redis.FullBulkStringRedisMessage;
+import io.netty.handler.codec.redis.RedisMessage;
+import io.netty.handler.codec.redis.SimpleStringRedisMessage;
 import io.netty.util.CharsetUtil;
+
+import java.util.List;
 
 /**
  * 2024/5/9 9:37
@@ -55,7 +59,7 @@ public class SyncCommand extends Command {
     }
 
     public boolean isIgnoreMessage() {
-        String content = getStringByIndexFromMessage(2);
+        String content = getStringByIndexFromMessage(0);
         if (content.toUpperCase().startsWith(Constant.SELECT)) {
             return fromContext.isFromIsCluster() || fromContext.isToIsCluster();
         }
@@ -63,7 +67,7 @@ public class SyncCommand extends Command {
     }
 
     public String getKey() {
-        return getStringByIndexFromMessage(4);
+        return getStringByIndexFromMessage(1);
     }
 
     private String getStringByIndexFromMessage(int index) {
@@ -77,13 +81,13 @@ public class SyncCommand extends Command {
     }
 
     private int getArrayMessageLength(ArrayRedisMessage msg) {
-        int length = 0;
+        List<RedisMessage> children = msg.children();
+        int size = children.size();
+        int length = 1 + String.valueOf(size).length() + 2 + size * 5;
         for (RedisMessage child : msg.children()) {
-            if (child instanceof ArrayHeaderRedisMessage) {
-                length += 1 + String.valueOf(((ArrayHeaderRedisMessage) child).length()).length() + 2;
-            } else if (child instanceof BulkStringHeaderRedisMessage) {
-                long stringLength = ((BulkStringHeaderRedisMessage) child).bulkStringLength();
-                length += (int) (1 + String.valueOf(stringLength).length() + 2 + stringLength + 2);
+            if (child instanceof FullBulkStringRedisMessage) {
+                long stringLength = ((FullBulkStringRedisMessage) child).content().readableBytes();
+                length += (int) stringLength + String.valueOf(stringLength).length();
             } else if (child instanceof ArrayRedisMessage) {
                 length += getArrayMessageLength(((ArrayRedisMessage) child));
             }
