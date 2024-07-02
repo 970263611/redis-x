@@ -3,6 +3,10 @@ package com.dahuaboke.redisx.from.rdb;
 import com.dahuaboke.redisx.Constant;
 import com.dahuaboke.redisx.from.rdb.stream.Stream;
 import com.dahuaboke.redisx.from.rdb.zset.ZSetEntry;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.redis.ArrayRedisMessage;
+import io.netty.handler.codec.redis.FullBulkStringRedisMessage;
+import io.netty.handler.codec.redis.RedisMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,16 +55,16 @@ public class CommandParser {
         FUNCTION;
     }
 
-    public List<String> parser(RdbHeader rdbHeader) {
-        List<String> result = new LinkedList();
+    public List<ArrayRedisMessage> parser(RdbHeader rdbHeader) {
+        List<ArrayRedisMessage> result = new LinkedList();
         if (rdbHeader.getFunction() != null && rdbHeader.getFunction().size() > 0) {
             function(result, rdbHeader.getFunction());
         }
         return result;
     }
 
-    public List<String> parser(RdbData rdbData) {
-        List<String> result = new LinkedList();
+    public List<ArrayRedisMessage> parser(RdbData rdbData) {
+        List<ArrayRedisMessage> result = new LinkedList();
         switch (typeMap.get(rdbData.getRdbType())) {
             case STRING:
                 string(result, rdbData.getKey(), (byte[]) rdbData.getValue());
@@ -90,130 +94,143 @@ public class CommandParser {
         long lastTime = expireTime - System.currentTimeMillis();
         ExpiredType expiredType = rdbData.getExpiredType();
         if (ExpiredType.NONE != expiredType) {
-            StringBuilder sb = new StringBuilder();
-            sb.append("expire");
-            sb.append(Constant.STR_SPACE).append(new String(rdbData.getKey()));
+            List<RedisMessage> fullList = new ArrayList<>();
+            fullList.add(createMassage("expire"));
+            fullList.add(createMassage(rdbData.getKey()));
             if (ExpiredType.SECOND == expiredType) {
-                sb.append(Constant.STR_SPACE).append(lastTime);
+                fullList.add(createMassage(lastTime + ""));
             } else if (ExpiredType.MS == expiredType) {
-                sb.append(Constant.STR_SPACE).append(lastTime / 1000);
+                fullList.add(createMassage(lastTime/1000 + ""));
             } else {
                 throw new IllegalArgumentException("Rdb type error");
             }
-            result.add(new String(sb));
+            result.add(new ArrayRedisMessage(fullList));
         }
         return result;
     }
 
-    private void string(List<String> list, byte[] key, byte[] value) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("SET");
-        sb.append(Constant.STR_SPACE).append(new String(key));
-        sb.append(Constant.STR_SPACE).append(new String(value));
-        list.add(sb.toString());
+    private void string(List<ArrayRedisMessage> list, byte[] key, byte[] value) {
+        List<RedisMessage> fullList = new ArrayList<>();
+        fullList.add(createMassage("SET"));
+        fullList.add(createMassage(key));
+        fullList.add(createMassage(value));
+        list.add(new ArrayRedisMessage(fullList));
     }
 
-    private void list(List<String> list, byte[] key, List<byte[]> value) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("LPUSH");
-        sb.append(Constant.STR_SPACE).append(new String(key));
+    private void list(List<ArrayRedisMessage> list, byte[] key, List<byte[]> value) {
+        List<RedisMessage> fullList = new ArrayList<>();
+        fullList.add(createMassage("LPUSH"));
+        fullList.add(createMassage(key));
         for (byte[] bytes : value) {
-            sb.append(Constant.STR_SPACE).append(new String(bytes));
+            fullList.add(createMassage(bytes));
         }
-        list.add(sb.toString());
+        list.add(new ArrayRedisMessage(fullList));
     }
 
-    private void set(List<String> list, byte[] key, Set<byte[]> value) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("SADD");
-        sb.append(Constant.STR_SPACE).append(new String(key));
+    private void set(List<ArrayRedisMessage> list, byte[] key, Set<byte[]> value) {
+        List<RedisMessage> fullList = new ArrayList<>();
+        fullList.add(createMassage("SADD"));
+        fullList.add(createMassage(key));
         for (byte[] bytes : value) {
-            sb.append(Constant.STR_SPACE).append(new String(bytes));
+            fullList.add(createMassage(bytes));
         }
-        list.add(sb.toString());
+        list.add(new ArrayRedisMessage(fullList));
     }
 
-    private void zet(List<String> list, byte[] key, Set<ZSetEntry> value) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("ZADD");
-        sb.append(Constant.STR_SPACE).append(new String(key));
+    private void zet(List<ArrayRedisMessage> list, byte[] key, Set<ZSetEntry> value) {
+        List<RedisMessage> fullList = new ArrayList<>();
+        fullList.add(createMassage("ZADD"));
+        fullList.add(createMassage(key));
         for (ZSetEntry zSetEntry : value) {
             String score = String.valueOf(zSetEntry.getScore());
             byte[] element = zSetEntry.getElement();
-            sb.append(Constant.STR_SPACE).append(score);
-            sb.append(Constant.STR_SPACE).append(new String(element));
+            fullList.add(createMassage(score));
+            fullList.add(createMassage(element));
         }
-        list.add(sb.toString());
+        list.add(new ArrayRedisMessage(fullList));
     }
 
-    private void hash(List<String> list, byte[] key, Map<byte[], byte[]> value) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("HSET");
-        sb.append(Constant.STR_SPACE).append(new String(key));
+    private void hash(List<ArrayRedisMessage> list, byte[] key, Map<byte[], byte[]> value) {
+        List<RedisMessage> fullList = new ArrayList<>();
+        fullList.add(createMassage("HSET"));
+        fullList.add(createMassage(key));
         for (Map.Entry<byte[], byte[]> kAbdV : value.entrySet()) {
             byte[] key1 = kAbdV.getKey();
             byte[] value1 = kAbdV.getValue();
-            sb.append(Constant.STR_SPACE).append(new String(key1));
-            sb.append(Constant.STR_SPACE).append(new String(value1));
+            fullList.add(createMassage(key1));
+            fullList.add(createMassage(value1));
         }
-        list.add(sb.toString());
+        list.add(new ArrayRedisMessage(fullList));
     }
 
-    private void stream(List<String> list, byte[] key, Stream value) {
+    private void stream(List<ArrayRedisMessage> list, byte[] key, Stream value) {
         String streamName = new String(key);
         if (!value.getEntries().isEmpty()) {
             for (Map.Entry<Stream.ID, Stream.Entry> kandv : value.getEntries().entrySet()) {
                 if (kandv.getValue().isDeleted()) {
                     continue;
                 }
-                StringBuilder sb = new StringBuilder();
-                sb.append("XADD");
-                sb.append(Constant.STR_SPACE).append(streamName);
-                sb.append(Constant.STR_SPACE).append(kandv.getKey().getMs()).append("-").append(kandv.getKey().getSeq());
+                List<RedisMessage> fullList = new ArrayList<>();
+                fullList.add(createMassage("XADD"));
+                fullList.add(createMassage(streamName));
+                fullList.add(createMassage(kandv.getKey().getMs() + "-" + kandv.getKey().getSeq()));
                 for (Map.Entry<byte[], byte[]> entry : kandv.getValue().getFields().entrySet()) {
-                    sb.append(Constant.STR_SPACE).append(new String(entry.getKey()));
-                    sb.append(Constant.STR_SPACE).append(new String(entry.getValue()));
+                    fullList.add(createMassage(entry.getKey()));
+                    fullList.add(createMassage(entry.getValue()));
                 }
-                list.add(sb.toString());
+                list.add(new ArrayRedisMessage(fullList));
             }
         }
         if (!value.getGroups().isEmpty()) {
             for (int i = 0; i < value.getGroups().size(); i++) {
                 Stream.Group group = value.getGroups().get(i);
                 StringBuilder sb = new StringBuilder();
-                sb.append("XGROUP CREATE");
-                sb.append(Constant.STR_SPACE).append(streamName);
-                sb.append(Constant.STR_SPACE).append(new String(group.getName()));
-                sb.append(Constant.STR_SPACE).append(group.getLastId().getMs()).append("-").append(group.getLastId().getSeq());
-                sb.append(Constant.STR_SPACE).append("ENTRIESREAD").append(Constant.STR_SPACE).append(group.getEntriesRead());
-                list.add(sb.toString());
+                List<RedisMessage> fullList = new ArrayList<>();
+                fullList.add(createMassage("XGROUP"));
+                fullList.add(createMassage("CREATE"));
+                fullList.add(createMassage(streamName));
+                fullList.add(createMassage(group.getName()));
+                fullList.add(createMassage(group.getLastId().getMs() + "-" + group.getLastId().getSeq()));
+                fullList.add(createMassage("ENTRIESREAD"));
+                fullList.add(createMassage(group.getEntriesRead() + ""));
+                list.add(new ArrayRedisMessage(fullList));
                 if (group.getConsumers() != null && group.getConsumers().size() > 0) {
                     for (int m = 0; m < group.getConsumers().size(); m++) {
-                        sb = new StringBuilder();
-                        sb.append("XGROUP CREATECONSUMER");
-                        sb.append(Constant.STR_SPACE).append(streamName);
-                        sb.append(Constant.STR_SPACE).append(new String(group.getName()));
-                        sb.append(Constant.STR_SPACE).append(new String(group.getConsumers().get(m).getName()));
-                        list.add(sb.toString());
+                        List<RedisMessage> fullList2 = new ArrayList<>();
+                        fullList2.add(createMassage("XGROUP"));
+                        fullList2.add(createMassage("CREATECONSUMER"));
+                        fullList2.add(createMassage(streamName));
+                        fullList2.add(createMassage(group.getName()));
+                        fullList2.add(createMassage(group.getConsumers().get(m).getName()));
+                        list.add(new ArrayRedisMessage(fullList2));
                     }
                 }
             }
         }
     }
 
-    private void moudule(List<String> list, byte[] key, Object data) {
+    private void moudule(List<ArrayRedisMessage> list, byte[] key, Object data) {
 
     }
 
-    private void function(List<String> list, List<byte[]> value) {
+    private void function(List<ArrayRedisMessage> list, List<byte[]> value) {
         if (value != null && value.size() > 0) {
             value.forEach(v -> {
-                StringBuilder sb = new StringBuilder();
-                sb.append("FUNCTION LOAD");
-                sb.append(Constant.STR_SPACE).append(new String(v));
-                list.add(sb.toString());
+                List<RedisMessage> fullList = new ArrayList<>();
+                fullList.add(createMassage("FUNCTION"));
+                fullList.add(createMassage("LOAD"));
+                fullList.add(createMassage(v));
+                list.add(new ArrayRedisMessage(fullList));
             });
         }
+    }
+
+    private FullBulkStringRedisMessage createMassage(String command){
+        return createMassage("FUNCTION".getBytes());
+    }
+
+    private FullBulkStringRedisMessage createMassage(byte[] command){
+        return new FullBulkStringRedisMessage(Unpooled.buffer().writeBytes(command));
     }
 
 }

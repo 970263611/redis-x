@@ -162,9 +162,9 @@ public class RdbByteStreamDecoder extends ChannelInboundHandlerAdapter {
         RdbParser parser = new RdbParser(byteBuf);
         parser.parseHeader();
         logger.debug(parser.getRdbInfo().getRdbHeader().toString());
-        List<String> commands = commandParser.parser(parser.getRdbInfo().getRdbHeader());
-        for (String command : commands) {
-            boolean success = fromContext.publish(command, null);
+        List<ArrayRedisMessage> commands = commandParser.parser(parser.getRdbInfo().getRdbHeader());
+        for (RedisMessage command : commands) {
+            boolean success = fromContext.publish(new SyncCommand(fromContext, command, false));
             if (success) {
                 logger.debug("Success rdb data [{}]", command);
             } else {
@@ -177,15 +177,11 @@ public class RdbByteStreamDecoder extends ChannelInboundHandlerAdapter {
             if (rdbData != null) {
                 if (rdbData.getDataNum() == 1) {
                     long selectDB = rdbData.getSelectDB();
-                    BulkStringHeaderRedisMessage selectLen = new BulkStringHeaderRedisMessage(Constant.SELECT_PREFIX.length());
                     FullBulkStringRedisMessage select = new FullBulkStringRedisMessage(ByteBufUtil.writeUtf8(ctx.alloc(), Constant.SELECT_PREFIX));
                     String dbSize = String.valueOf(selectDB);
-                    BulkStringHeaderRedisMessage dbLen = new BulkStringHeaderRedisMessage(dbSize.length());
                     FullBulkStringRedisMessage db = new FullBulkStringRedisMessage(ByteBufUtil.writeUtf8(ctx.alloc(), dbSize));
                     ArrayRedisMessage arrayRedisMessage = new ArrayRedisMessage(new ArrayList<RedisMessage>() {{
-                        add(selectLen);
                         add(select);
-                        add(dbLen);
                         add(db);
                     }});
                     boolean success = fromContext.publish(new SyncCommand(fromContext, arrayRedisMessage, false));
@@ -196,8 +192,8 @@ public class RdbByteStreamDecoder extends ChannelInboundHandlerAdapter {
                     }
                 }
                 commands = commandParser.parser(rdbData);
-                for (String command : commands) {
-                    boolean success = fromContext.publish(command, null);
+                for (RedisMessage command : commands) {
+                    boolean success = fromContext.publish(new SyncCommand(fromContext, command, false));
                     if (success) {
                         logger.debug("Success rdb data [{}]", command);
                     } else {
