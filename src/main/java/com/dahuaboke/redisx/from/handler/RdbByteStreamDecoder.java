@@ -154,32 +154,33 @@ public class RdbByteStreamDecoder extends ChannelInboundHandlerAdapter {
             if(info.isEnd()){
                 break;
             }
-            if(info.isDataReady()){
-                RdbData data = info.getRdbData();
-                if (data.getDataNum() == 1) {
-                    long selectDB = data.getSelectDB();
-                    SyncCommand syncCommand2 = new SyncCommand(fromContext, new ArrayList<String>() {{
-                        add(Constant.SELECT);
-                        add(String.valueOf(selectDB));
-                    }}, false);
-                    boolean success2 = fromContext.publish(syncCommand2);
-                    if (success2) {
-                        logger.debug("Select db success [{}]", selectDB);
-                    } else {
-                        logger.error("Select db failed [{}]", selectDB);
-                    }
-                }
-                List<List<String>> commands = commandParser.parser(data);
-                for (List<String> command : commands) {
-                    SyncCommand syncCommand1 = new SyncCommand(fromContext, command, false);
-                    boolean success1 = fromContext.publish(syncCommand1);
-                    if (success1) {
-                        logger.trace("Success rdb data [{}]", commands);
-                    } else {
-                        logger.error("Sync rdb data [{}] failed", commands);
-                    }
-                }
-            }
+            //TODO 待处理
+//            if(info.isDataReady()){
+//                RdbData data = info.getRdbData();
+//                if (data.getDataNum() == 1) {
+//                    long selectDB = data.getSelectDB();
+//                    SyncCommand syncCommand2 = new SyncCommand(fromContext, new ArrayList<String>() {{
+//                        add(Constant.SELECT);
+//                        add(String.valueOf(selectDB));
+//                    }}, false);
+//                    boolean success2 = fromContext.publish(syncCommand2);
+//                    if (success2) {
+//                        logger.debug("Select db success [{}]", selectDB);
+//                    } else {
+//                        logger.error("Select db failed [{}]", selectDB);
+//                    }
+//                }
+//                List<List<String>> commands = commandParser.parser(data);
+//                for (List<String> command : commands) {
+//                    SyncCommand syncCommand1 = new SyncCommand(fromContext, command, false);
+//                    boolean success1 = fromContext.publish(syncCommand1);
+//                    if (success1) {
+//                        logger.trace("Success rdb data [{}]", commands);
+//                    } else {
+//                        logger.error("Sync rdb data [{}] failed", commands);
+//                    }
+//                }
+//            }
         }
     }
 }

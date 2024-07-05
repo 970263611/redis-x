@@ -71,7 +71,6 @@ public class FromClient {
                         if (fromContext.isFromIsCluster()) {
                             pipeline.addLast(Constant.SLOT_HANDLER_NAME, new SlotInfoHandler(fromContext, hasPassword));
                         }
-                        //pipeline.addLast(new MessagePostProcessor(fromContext));
                         pipeline.addLast(new PostDistributeHandler());
                         pipeline.addLast(new SyncCommandPublisher(fromContext));
                         pipeline.addLast(new DirtyDataHandler());

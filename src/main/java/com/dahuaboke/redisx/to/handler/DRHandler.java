@@ -2,7 +2,6 @@ package com.dahuaboke.redisx.to.handler;
 
 import com.dahuaboke.redisx.Constant;
 import com.dahuaboke.redisx.Context;
-import com.dahuaboke.redisx.handler.RedisChannelInboundHandler;
 import com.dahuaboke.redisx.to.ToContext;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;

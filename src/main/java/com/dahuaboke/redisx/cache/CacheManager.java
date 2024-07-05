@@ -82,11 +82,10 @@ public final class CacheManager {
     }
 
     public boolean publish(SyncCommand command) {
-        String key = command.getKey();
         for (Map.Entry<Context, BlockingQueue<SyncCommand>> entry : cache.entrySet()) {
             Context k = entry.getKey();
             BlockingQueue<SyncCommand> v = entry.getValue();
-            if (k.isAdapt(toIsCluster, key)) {
+            if (k.isAdapt(toIsCluster, command.getKey())) {
                 boolean offer = v.offer(command);
                 int size = v.size();
                 if (size > 10000) {

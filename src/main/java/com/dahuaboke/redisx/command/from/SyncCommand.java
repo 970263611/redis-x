@@ -1,19 +1,11 @@
 package com.dahuaboke.redisx.command.from;
 
-import com.dahuaboke.redisx.Constant;
+
 import com.dahuaboke.redisx.Context;
 import com.dahuaboke.redisx.command.Command;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.handler.codec.redis.ArrayRedisMessage;
-import io.netty.handler.codec.redis.FullBulkStringRedisMessage;
-import io.netty.handler.codec.redis.RedisMessage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
+import io.netty.buffer.ByteBuf;
+
 
 /**
  * 2024/5/9 9:37
@@ -22,120 +14,54 @@ import java.util.List;
  */
 public class SyncCommand extends Command {
 
-    private static final Logger logger = LoggerFactory.getLogger(SyncCommand.class);
-    private List<String> command = new LinkedList<>();
+    private long length;
+
+    private long syncLength;
+
+    private String key;
+
+    ByteBuf byteBuf;
+
     private Context context;
-    private int length = 0;
-    private int syncLength;
-    private boolean needAddLengthToOffset;
-    private RedisMessage redisMessage;
-    private String stringCommand;
-    String key;
-    private static List<String> specialCommandPrefix = new ArrayList<String>() {{
-        add("BITOP");
-        add("MEMORY");
-        add("BZMPOP");
-        add("OBJECT");
-        add("EVAL");
-        add("EVAL_RO");
-        add("EVALSHA");
-        add("EVALSHA_RO");
-        add("FCALL");
-        add("FCALL_RO");
-        add("PFDEBUG");
-        add("XGROUP");
-        add("XINFO");
-    }};
 
-    public SyncCommand(Context context, boolean needAddLengthToOffset) {
-        this.context = context;
-        this.needAddLengthToOffset = needAddLengthToOffset;
-    }
-
-    public SyncCommand(Context context, List<String> command, boolean needAddLengthToOffset) {
-        this.context = context;
-        this.command = command;
-        this.needAddLengthToOffset = needAddLengthToOffset;
-    }
-
-    public RedisMessage getCommand() {
-        return redisMessage;
-    }
-
-    public void buildCommand() {
-        List<RedisMessage> children = new LinkedList<>();
-        for (String c : command) {
-            ByteBuf buffer = ByteBufAllocator.DEFAULT.buffer();
-            buffer.writeBytes(c.getBytes());
-            children.add(new FullBulkStringRedisMessage(buffer));
-        }
-        redisMessage = new ArrayRedisMessage(children);
-        String s = command.get(0);
-        if (command.size() > 1) {
-            if (specialCommandPrefix.contains(s.toUpperCase())) {
-                key = command.get(2);
-            } else {
-                key = command.get(1);
-            }
-        } else {
-            logger.warn("Command not has key [{}]", command);
-            key = s;
-        }
-        getStringCommand();
-        command = null;
-    }
-
-    public int getSyncLength() {
-        return syncLength;
-    }
-
-    public void setSyncLength(int syncLength) {
-        this.syncLength = syncLength;
-    }
-
-    public int getCommandLength() {
+    public long getLength() {
         return length;
     }
 
-    public void appendCommand(String c) {
-        command.add(c);
+    public void setLength(long length) {
+        this.length = length;
     }
 
-    public void appendLength(int l) {
-        length += l;
+    public long getSyncLength() {
+        return syncLength;
     }
 
-    public String getStringCommand() {
-        if (stringCommand == null) {
-            StringBuilder sb = new StringBuilder();
-            for (String s : command) {
-                if (sb.length() != 0) {
-                    sb.append(" ");
-                }
-                sb.append(s);
-            }
-            stringCommand = new String(sb);
-        }
-        return stringCommand;
+    public void setSyncLength(long syncLength) {
+        this.syncLength = syncLength;
     }
 
-    public boolean isIgnore() {
-        String stringCommand = getStringCommand();
-        if (stringCommand.toUpperCase().startsWith(Constant.SELECT)) {
-            return context.isFromIsCluster() || context.isToIsCluster();
-        }
-        return Constant.PING_COMMAND.equalsIgnoreCase(stringCommand) || Constant.MULTI.equalsIgnoreCase(stringCommand) || Constant.EXEC.equalsIgnoreCase(stringCommand);
+    public ByteBuf getByteBuf() {
+        return byteBuf;
+    }
+
+    public void setByteBuf(ByteBuf byteBuf) {
+        this.byteBuf = byteBuf;
     }
 
     public String getKey() {
         return key;
     }
 
-    public boolean isNeedAddLengthToOffset() {
-        return needAddLengthToOffset;
+    public void setKey(String key) {
+        this.key = key;
     }
 
     public Context getContext() {
         return context;
     }
+
+    public void setContext(Context context) {
+        this.context = context;
+    }
+
 }

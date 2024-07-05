@@ -61,13 +61,14 @@ public class FromContext extends Context {
 
     public boolean publish(SyncCommand command) {
         if (!isConsole) {
-            command.buildCommand();
             return cacheManager.publish(command);
         } else {
             if (replyQueue == null) {
                 throw new IllegalStateException("By console mode replyQueue need init");
             } else {
-                return replyQueue.offer(command.getStringCommand());
+                //TODO 待处理
+                //return replyQueue.offer(command.getStringCommand());
+                return true;
             }
         }
     }

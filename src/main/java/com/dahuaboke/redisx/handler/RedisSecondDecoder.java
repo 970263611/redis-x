@@ -1,11 +1,9 @@
 package com.dahuaboke.redisx.handler;
 
 import com.dahuaboke.redisx.Constant;
-import com.dahuaboke.redisx.command.from.SyncCommand2;
-import com.dahuaboke.redisx.utils.CRC16;
+import com.dahuaboke.redisx.command.from.SyncCommand;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -20,7 +18,7 @@ public class RedisSecondDecoder extends ChannelInboundHandlerAdapter {
         if(msg instanceof List){
             List<ByteBuf> buflist = (List<ByteBuf>) msg;
             int keypos = -1;
-            SyncCommand2 command = new SyncCommand2();
+            SyncCommand command = new SyncCommand();
             ByteBuf[] arr = new ByteBuf[buflist.size()];
             for(int i=0; i < buflist.size(); i++){
                 arr[i] =  buflist.get(i);
@@ -31,7 +29,7 @@ public class RedisSecondDecoder extends ChannelInboundHandlerAdapter {
                 }
                 if(keypos == i){
                     findIndex(arr[i]);
-                    command.setSlot(CRC16.crc16(arr[i]));
+                    command.setKey(arr[i].toString(Charset.defaultCharset()));
                     resetIndex(arr[i]);
                 }
             }

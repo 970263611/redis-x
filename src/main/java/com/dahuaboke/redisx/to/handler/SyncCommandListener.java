@@ -5,6 +5,7 @@ import com.dahuaboke.redisx.Context;
 import com.dahuaboke.redisx.command.from.SyncCommand;
 import com.dahuaboke.redisx.from.FromContext;
 import com.dahuaboke.redisx.to.ToContext;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -39,25 +40,22 @@ public class SyncCommandListener extends ChannelInboundHandlerAdapter {
                     boolean immediate = toContext.isImmediate();
                     if (syncCommand != null) {
                         FromContext fromContext = (FromContext) syncCommand.getContext();
-                        int length = syncCommand.getSyncLength();
-                        RedisMessage redisMessage = syncCommand.getCommand();
                         long offset = fromContext.getOffset();
-                        if (syncCommand.isNeedAddLengthToOffset()) {
-                            offset += length;
-                            fromContext.setOffset(offset);
-                        }
+                        long synclength = syncCommand.getSyncLength();
+                        fromContext.setOffset(offset + synclength);
                         if (immediate) { //强一致模式
-                            for (int i = 0; i < toContext.getImmediateResendTimes(); i++) {
-                                boolean success = immediateSend(ctx, redisMessage, length, i + 1);
-                                if (success) {
-                                    break;
-                                }
-                            }
+                            //TODO 待处理
+//                            for (int i = 0; i < toContext.getImmediateResendTimes(); i++) {
+//                                boolean success = immediateSend(ctx, redisMessage, length, i + 1);
+//                                if (success) {
+//                                    break;
+//                                }
+//                            }
                         } else {
-                            ctx.write(redisMessage);
+                            ctx.write(syncCommand.getByteBuf());
                             flushThreshold++;
                         }
-                        logger.trace("Write command [{}] length [{}], now offset [{}]", syncCommand.getStringCommand(), length, offset);
+                        logger.trace("Write length [{}] now offset [{}] command \r\n [{}]" ,syncCommand.getLength(), offset, ByteBufUtil.prettyHexDump(syncCommand.getByteBuf()));
                     }
                     if (!immediate && (flushThreshold > flushSize || (System.currentTimeMillis() - timeThreshold > 100))) {
                         if (flushThreshold > 0) {

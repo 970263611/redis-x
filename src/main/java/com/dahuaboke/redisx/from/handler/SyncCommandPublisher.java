@@ -1,7 +1,6 @@
 package com.dahuaboke.redisx.from.handler;
 
 import com.dahuaboke.redisx.command.from.SyncCommand;
-import com.dahuaboke.redisx.command.from.SyncCommand2;
 import com.dahuaboke.redisx.from.FromContext;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
@@ -14,7 +13,7 @@ import org.slf4j.LoggerFactory;
  * auth: dahua
  * desc:
  */
-public class SyncCommandPublisher extends SimpleChannelInboundHandler<SyncCommand2> {
+public class SyncCommandPublisher extends SimpleChannelInboundHandler<SyncCommand> {
 
     private static final Logger logger = LoggerFactory.getLogger(SyncCommandPublisher.class);
     private FromContext fromContext;
@@ -25,27 +24,19 @@ public class SyncCommandPublisher extends SimpleChannelInboundHandler<SyncComman
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, SyncCommand2 msg) throws Exception {
-        logger.info("SyncCommand length [{}] command \r\n [{}]" ,msg.getLength() ,ByteBufUtil.prettyHexDump(msg.getByteBuf()));
+    protected void channelRead0(ChannelHandlerContext ctx, SyncCommand command) throws Exception {
+        if (command.getKey() == null) {
+            unSyncCommandLength += command.getLength();
+        } else {
+            command.setContext(fromContext);
+            command.setSyncLength(unSyncCommandLength + command.getLength());
+            unSyncCommandLength = 0;
+            boolean success = fromContext.publish(command);
+            if (success) {
+                logger.debug("Sync success length [{}] command \r\n [{}]" ,command.getLength() ,ByteBufUtil.prettyHexDump(command.getByteBuf()));
+            } else {
+                logger.error("Sync failed length [{}] command \r\n [{}]" ,command.getLength() ,ByteBufUtil.prettyHexDump(command.getByteBuf()));
+            }
+        }
     }
-
-//    @Override
-//    protected void channelRead0(ChannelHandlerContext ctx, SyncCommand command) throws Exception {
-//        int commandLength = command.getCommandLength();
-//        if (command.isIgnore()) {
-//            unSyncCommandLength += commandLength;
-//        } else {
-//            if (unSyncCommandLength > 0) {
-//                commandLength += unSyncCommandLength;
-//                unSyncCommandLength = 0;
-//            }
-//            command.setSyncLength(commandLength);
-//            boolean success = fromContext.publish(command);
-//            if (success) {
-//                logger.debug("Success sync command [{}], length [{}]", command.getStringCommand(), commandLength);
-//            } else {
-//                logger.error("Sync command [{}] failed, length [{}]", command.getStringCommand(), commandLength);
-//            }
-//        }
-//    }
 }
