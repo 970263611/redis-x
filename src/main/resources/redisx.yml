@@ -5,16 +5,16 @@ redisx:
     #password: 2B*1a.
     isCluster: true
     address:
-      - localhost:6379
-      - localhost:6380
-      - localhost:6381
+      - 192.168.20.11:16001
+      - 192.168.20.11:16002
+      - 192.168.20.11:16003
   to:
     #password: 1a.2B*
     isCluster: true
     address:
-      - localhost:7379
-      - localhost:7380
-      - localhost:7381
+      - 192.168.20.11:16101
+      - 192.168.20.11:16102
+      - 192.168.20.11:16103
     flushSize: 20
   console:
     enable: false

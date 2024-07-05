@@ -6,6 +6,8 @@ import com.dahuaboke.redisx.from.FromContext;
 import com.dahuaboke.redisx.to.ToContext;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.SimpleChannelInboundHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,14 +22,13 @@ import java.util.regex.Pattern;
  * auth: cdl
  * desc:
  */
-public class SlotInfoHandler extends RedisChannelInboundHandler {
+public class SlotInfoHandler extends SimpleChannelInboundHandler<String> {
 
     private static final Logger logger = LoggerFactory.getLogger(CommandEncoder.class);
     private Context context;
     private boolean hasPassword;
 
     public SlotInfoHandler(Context context, boolean hasPassword) {
-        super(context);
         this.context = context;
         this.hasPassword = hasPassword;
     }
@@ -41,7 +42,7 @@ public class SlotInfoHandler extends RedisChannelInboundHandler {
     }
 
     @Override
-    public void channelRead2(ChannelHandlerContext ctx, String msg) throws Exception {
+    protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
         if (hasPassword) {
             if ("SLOTSEND".equals(msg)) {
                 sendSlotCommand(ctx);
@@ -110,6 +111,8 @@ public class SlotInfoHandler extends RedisChannelInboundHandler {
             }
         }
     }
+
+
 
     public class SlotInfo {
         //节点编号，40位随机字符串

@@ -2,17 +2,11 @@ package com.dahuaboke.redisx.from;
 
 import com.dahuaboke.redisx.Constant;
 import com.dahuaboke.redisx.from.handler.*;
-import com.dahuaboke.redisx.handler.AuthHandler;
-import com.dahuaboke.redisx.handler.CommandEncoder;
-import com.dahuaboke.redisx.handler.DirtyDataHandler;
-import com.dahuaboke.redisx.handler.SlotInfoHandler;
+import com.dahuaboke.redisx.handler.*;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.redis.RedisArrayAggregator;
-import io.netty.handler.codec.redis.RedisBulkStringAggregator;
-import io.netty.handler.codec.redis.RedisDecoder;
 import io.netty.handler.codec.redis.RedisEncoder;
 import io.netty.util.ResourceLeakDetector;
 import org.slf4j.Logger;
@@ -57,6 +51,7 @@ public class FromClient {
                         boolean console = fromContext.isConsole();
                         pipeline.addLast(new RedisEncoder());
                         pipeline.addLast(new CommandEncoder());
+                        pipeline.addLast(new PrintBufHandler());
                         boolean hasPassword = false;
                         String password = fromContext.getPassword();
                         if (password != null && !password.isEmpty()) {
@@ -71,13 +66,12 @@ public class FromClient {
                             pipeline.addLast(Constant.OFFSET_DECODER_NAME, new OffsetCommandDecoder(fromContext));
                             pipeline.addLast(new RdbByteStreamDecoder(fromContext));
                         }
-                        pipeline.addLast(new RedisDecoder(true));
-                        pipeline.addLast(new RedisBulkStringAggregator());
-                        pipeline.addLast(new RedisArrayAggregator());
+                        pipeline.addLast(new RedisFirstDecoder());
+                        pipeline.addLast(new RedisSecondDecoder());
                         if (fromContext.isFromIsCluster()) {
                             pipeline.addLast(Constant.SLOT_HANDLER_NAME, new SlotInfoHandler(fromContext, hasPassword));
                         }
-                        pipeline.addLast(new MessagePostProcessor(fromContext));
+                        //pipeline.addLast(new MessagePostProcessor(fromContext));
                         pipeline.addLast(new PostDistributeHandler());
                         pipeline.addLast(new SyncCommandPublisher(fromContext));
                         pipeline.addLast(new DirtyDataHandler());

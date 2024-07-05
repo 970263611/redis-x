@@ -5,6 +5,7 @@ import com.dahuaboke.redisx.Context;
 import com.dahuaboke.redisx.handler.RedisChannelInboundHandler;
 import com.dahuaboke.redisx.to.ToContext;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,7 +16,7 @@ import java.util.LinkedList;
  * auth: dahua
  * desc: 主备策略处理器
  */
-public class DRHandler extends RedisChannelInboundHandler {
+public class DRHandler extends SimpleChannelInboundHandler<String> {
 
     private static final Logger logger = LoggerFactory.getLogger(DRHandler.class);
     private ToContext toContext;
@@ -25,12 +26,11 @@ public class DRHandler extends RedisChannelInboundHandler {
     }};
 
     public DRHandler(Context toContext) {
-        super(toContext);
         this.toContext = (ToContext) toContext;
     }
 
     @Override
-    public void channelRead2(ChannelHandlerContext ctx, String reply) throws Exception {
+    protected void channelRead0(ChannelHandlerContext ctx, String reply) throws Exception {
         if (ctx.pipeline().get(Constant.SLOT_HANDLER_NAME) == null &&
                 reply.startsWith(Constant.PROJECT_NAME)) {
             String[] split = reply.split("\\|");

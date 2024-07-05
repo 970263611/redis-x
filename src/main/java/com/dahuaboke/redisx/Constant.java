@@ -4,6 +4,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.AttributeKey;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * 2024/5/8 9:14
  * auth: dahua
@@ -93,6 +96,22 @@ public class Constant {
             'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
             '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '_'
     };
+
+    public static List<String> specialCommandPrefix = new ArrayList<String>() {{
+        add("BITOP");
+        add("MEMORY");
+        add("BZMPOP");
+        add("OBJECT");
+        add("EVAL");
+        add("EVAL_RO");
+        add("EVALSHA");
+        add("EVALSHA_RO");
+        add("FCALL");
+        add("FCALL_RO");
+        add("PFDEBUG");
+        add("XGROUP");
+        add("XINFO");
+    }};
 
     /**
      * len type

@@ -1,6 +1,9 @@
 package com.dahuaboke.redisx.to;
 
 import com.dahuaboke.redisx.Constant;
+import com.dahuaboke.redisx.from.handler.PrintBufHandler;
+import com.dahuaboke.redisx.handler.RedisFirstDecoder;
+import com.dahuaboke.redisx.handler.RedisSecondDecoder;
 import com.dahuaboke.redisx.handler.AuthHandler;
 import com.dahuaboke.redisx.handler.CommandEncoder;
 import com.dahuaboke.redisx.handler.DirtyDataHandler;
@@ -11,9 +14,6 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.redis.RedisArrayAggregator;
-import io.netty.handler.codec.redis.RedisBulkStringAggregator;
-import io.netty.handler.codec.redis.RedisDecoder;
 import io.netty.handler.codec.redis.RedisEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,6 +56,7 @@ public class ToClient {
                         ChannelPipeline pipeline = channel.pipeline();
                         pipeline.addLast(new RedisEncoder());
                         pipeline.addLast(new CommandEncoder());
+                        pipeline.addLast(new PrintBufHandler());
                         boolean hasPassword = false;
                         String password = toContext.getPassword();
                         if (password != null && !password.isEmpty()) {
@@ -64,9 +65,8 @@ public class ToClient {
                         if (hasPassword) {
                             pipeline.addLast(Constant.AUTH_HANDLER_NAME, new AuthHandler(password, toContext.isToIsCluster()));
                         }
-                        pipeline.addLast(new RedisDecoder(true));
-                        pipeline.addLast(new RedisBulkStringAggregator());
-                        pipeline.addLast(new RedisArrayAggregator());
+                        pipeline.addLast(new RedisFirstDecoder());
+                        pipeline.addLast(new RedisSecondDecoder());
                         if (toContext.isToIsCluster()) {
                             pipeline.addLast(Constant.SLOT_HANDLER_NAME, new SlotInfoHandler(toContext, hasPassword));
                         }

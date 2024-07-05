@@ -43,11 +43,6 @@ public class PreDistributeHandler extends ChannelInboundHandlerAdapter {
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof ByteBuf) {
             ByteBuf in = (ByteBuf) msg;
-            StringBuilder sb = new StringBuilder();
-            sb.append("\r\n<").append(Thread.currentThread().getName()).append(">")
-                    .append("<redis massage> = ").append(in).append("\r\n");
-            sb.append(ByteBufUtil.prettyHexDump(in).toString());
-            logger.trace(sb.toString());
 
             if (ctx.pipeline().get(Constant.INIT_SYNC_HANDLER_NAME) != null) {
                 ctx.fireChannelRead(in);
