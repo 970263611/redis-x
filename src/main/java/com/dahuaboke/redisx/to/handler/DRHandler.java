@@ -50,13 +50,15 @@ public class DRHandler extends SimpleChannelInboundHandler<String> {
                             String[] nodeMessagesSplit = nodeMessagesStr.split(";");
                             for (String nodeMessageStr : nodeMessagesSplit) {
                                 String[] messageSplit = nodeMessageStr.split("&", -1);
-                                String[] hostAndPort = messageSplit[0].split(":");
-                                String host = hostAndPort[0];
-                                int port = Integer.parseInt(hostAndPort[1]);
                                 String masterId = messageSplit[1];
-                                long offset = Long.parseLong(messageSplit[2]);
-                                logger.trace("Sync host [{}] port [{}] masterId [{}] offset [{}]", host, port, masterId, offset);
-                                toContext.setNodeMessage(host, port, masterId, offset);
+                                if (masterId != null && !"null".equalsIgnoreCase(masterId)) {
+                                    String[] hostAndPort = messageSplit[0].split(":");
+                                    String host = hostAndPort[0];
+                                    int port = Integer.parseInt(hostAndPort[1]);
+                                    long offset = Long.parseLong(messageSplit[2]);
+                                    logger.trace("Sync host [{}] port [{}] masterId [{}] offset [{}]", host, port, masterId, offset);
+                                    toContext.setNodeMessage(host, port, masterId, offset);
+                                }
                             }
                         }
                         //这里不用时间区间判断是因为无法保证各服务器时间相同

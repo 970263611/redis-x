@@ -29,7 +29,7 @@ public class OffsetCommandDecoder extends SimpleChannelInboundHandler<OffsetComm
         Channel channel = ctx.channel();
         String masterId = msg.getMasterId();
         if (masterId != null) {
-            channel.attr(Constant.MASTER_ID).set(masterId);
+            fromContext.setMasterId(masterId);
         } else {
             logger.error("MasterId is null");
         }

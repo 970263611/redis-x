@@ -212,12 +212,15 @@ public class ToContext extends Context {
         sb.append(this.getId());
         sb.append("|");
         getAllNodeMessages().forEach((k, v) -> {
-            sb.append(k);
-            sb.append("&");
-            sb.append(v.getMasterId());
-            sb.append("&");
-            sb.append(v.getOffset());
-            sb.append(";");
+            String masterId = v.getMasterId();
+            if (masterId != null) {
+                sb.append(k);
+                sb.append("&");
+                sb.append(v.getMasterId());
+                sb.append("&");
+                sb.append(v.getOffset());
+                sb.append(";");
+            }
         });
         sb.append("|");
         sb.append(System.currentTimeMillis());

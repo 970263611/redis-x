@@ -84,7 +84,8 @@ public class SyncInitializationHandler extends ChannelInboundHandlerAdapter {
                                     if (fromContext.isAlwaysFullSync()) {
                                         command += "? -1";
                                     } else {
-                                        if (nodeMessage == null || nodeMessage.getMasterId() == null) {
+                                        if (nodeMessage == null || nodeMessage.getMasterId() == null ||
+                                                "null".equalsIgnoreCase(nodeMessage.getMasterId())) {
                                             command += "? -1";
                                         } else {
                                             //从offset的下一位开始获取（包含）

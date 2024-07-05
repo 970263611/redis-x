@@ -28,8 +28,6 @@ public class Constant {
 
     public static final String FULLRESYNC = "+FULLRESYNC";
 
-    public static final AttributeKey<String> MASTER_ID = AttributeKey.valueOf("masterId");
-
     public static final AttributeKey<Long> OFFSET = AttributeKey.valueOf("offset");
 
     public static final AttributeKey<String> SYNC_REPLY = AttributeKey.valueOf("syncReply");
